@@ -1,0 +1,125 @@
+# =============================================================================
+# Unified Task Sync - Docker Compose Configuration
+# =============================================================================
+# This configuration deploys Vikunja (self-hosted task manager) with MariaDB
+# for use with CasaOS or standalone Docker environments.
+#
+# Usage:
+#   1. Copy .env.example to .env and configure your secrets
+#   2. Run: docker-compose up -d
+#   3. Access Vikunja at http://localhost:3456
+#
+# Security Notes:
+#   - Never commit .env files to version control
+#   - Generate strong passwords for production use
+#   - Consider using Docker secrets for sensitive data in production
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Vikunja - Self-hosted Task Management
+  # ---------------------------------------------------------------------------
+  # Vikunja is an open-source, self-hosted to-do app that provides a clean
+  # interface for managing tasks across multiple projects.
+  # Documentation: https://vikunja.io/docs/
+  # ---------------------------------------------------------------------------
+  vikunja:
+    image: vikunja/vikunja:latest
+    container_name: vikunja
+    restart: unless-stopped
+    ports:
+      # Map container port 3456 to host port 3456
+      # Change the first port if you need a different host port
+      - "3456:3456"
+    environment:
+      # Database connection settings
+      VIKUNJA_DATABASE_TYPE: mysql
+      VIKUNJA_DATABASE_HOST: db
+      VIKUNJA_DATABASE_DATABASE: ${MYSQL_DATABASE:-vikunja}
+      VIKUNJA_DATABASE_USER: ${MYSQL_USER:-vikunja}
+      VIKUNJA_DATABASE_PASSWORD: ${MYSQL_PASSWORD:?Database password is required}
+
+      # Service configuration
+      # Set this to your actual domain/IP in production
+      VIKUNJA_SERVICE_PUBLICURL: ${VIKUNJA_SERVICE_PUBLICURL:-http://localhost:3456}
+      VIKUNJA_SERVICE_JWTSECRET: ${VIKUNJA_SERVICE_JWTSECRET:?JWT secret is required}
+
+      # Frontend configuration (embedded in latest versions)
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: ${VIKUNJA_SERVICE_ENABLEREGISTRATION:-true}
+
+      # Timezone configuration
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Persist Vikunja files (attachments, avatars, etc.)
+      - vikunja-files:/app/vikunja/files
+    networks:
+      - vikunja-network
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      # Labels for CasaOS integration (optional)
+      - "casaos.name=Vikunja"
+      - "casaos.description=Self-hosted task management"
+      - "casaos.icon=https://vikunja.io/images/vikunja-logo.svg"
+
+  # ---------------------------------------------------------------------------
+  # MariaDB - Database Server
+  # ---------------------------------------------------------------------------
+  # MariaDB provides reliable storage for tasks, projects, and user data.
+  # Using MariaDB 10.x for stability and compatibility.
+  # ---------------------------------------------------------------------------
+  db:
+    image: mariadb:10
+    container_name: vikunja-db
+    restart: unless-stopped
+    command:
+      # UTF-8 configuration for proper character support
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      # Database credentials (loaded from .env file)
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Root password is required}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vikunja}
+      MYSQL_USER: ${MYSQL_USER:-vikunja}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Database password is required}
+
+      # Timezone configuration
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Persist database data
+      - vikunja-db:/var/lib/mysql
+    networks:
+      - vikunja-network
+    healthcheck:
+      # Health check to ensure database is ready before Vikunja starts
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# -----------------------------------------------------------------------------
+# Volumes - Persistent Storage
+# -----------------------------------------------------------------------------
+# Named volumes ensure data persistence across container restarts and updates.
+# Data is stored in Docker's volume directory (typically /var/lib/docker/volumes/)
+# -----------------------------------------------------------------------------
+volumes:
+  vikunja-files:
+    name: vikunja-files
+    driver: local
+  vikunja-db:
+    name: vikunja-db
+    driver: local
+
+# -----------------------------------------------------------------------------
+# Networks - Container Communication
+# -----------------------------------------------------------------------------
+# Internal network for secure communication between Vikunja and MariaDB.
+# Only Vikunja exposes ports to the host; database is isolated.
+# -----------------------------------------------------------------------------
+networks:
+  vikunja-network:
+    name: vikunja-network
+    driver: bridge
