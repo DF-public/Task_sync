@@ -8,11 +8,34 @@
 # Environment variables are loaded from the container environment.
 # =============================================================================
 
+# -----------------------------------------------------------------------------
+# Task Synchronization (Docker container - scripts/sync-tasks.sh)
+# -----------------------------------------------------------------------------
+
 # Sync all sources every 4 hours
 0 */4 * * * /scripts/sync-tasks.sh --source all >> /var/log/sync/cron.log 2>&1
 
 # Daily summary at 9 AM (optional - uncomment to enable)
 # 0 9 * * * /scripts/sync-tasks.sh --source all --verbose >> /var/log/sync/daily.log 2>&1
 
-# Health check every hour
+# -----------------------------------------------------------------------------
+# Headless Claude Code Operations (scripts/headless/)
+# -----------------------------------------------------------------------------
+
+# Import tasks every hour
+# Fetches latest tasks from Todoist/Vikunja APIs
+0 * * * * /scripts/headless/import-tasks.sh >> /var/log/sync/import.log 2>&1
+
+# Export status every 2 hours during daytime (8am-8pm local time)
+# Syncs completed tasks back to external systems
+0 8-20/2 * * * /scripts/headless/export-status.sh >> /var/log/sync/export.log 2>&1
+
+# -----------------------------------------------------------------------------
+# Health Checks
+# -----------------------------------------------------------------------------
+
+# Vikunja health check every hour
 0 * * * * curl -sf http://vikunja:3456/api/v1/info > /dev/null || echo "[$(date)] Vikunja health check failed" >> /var/log/sync/health.log
+
+# MCP server health check every 30 minutes
+*/30 * * * * curl -sf http://vikunja-mcp:3100/health > /dev/null || echo "[$(date)] MCP health check failed" >> /var/log/sync/health.log
