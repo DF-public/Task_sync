@@ -1,0 +1,65 @@
+# =============================================================================
+# YAML Lint Configuration
+# =============================================================================
+# Configuration for yamllint to check YAML files in this repository.
+# Tuned for Docker Compose and GitHub Actions files.
+# =============================================================================
+
+extends: default
+
+rules:
+  # Line length - relaxed for readability
+  line-length:
+    max: 120
+    level: warning
+    allow-non-breakable-inline-mappings: true
+
+  # Indentation - 2 spaces (standard for YAML)
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Comments - require space after #
+  comments:
+    require-starting-space: true
+    ignore-shebangs: true
+    min-spaces-from-content: 1
+
+  # Truthy values - allow various forms
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no', 'on', 'off']
+    check-keys: false
+
+  # Document markers - don't require
+  document-start: disable
+  document-end: disable
+
+  # Braces and brackets
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 1
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+
+  # Empty lines
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+  # New line at end of file
+  new-line-at-end-of-file: enable
+
+  # Key duplicates
+  key-duplicates: enable
+
+  # Octal values (for file permissions)
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: false
+
+ignore: |
+  .git/
+  node_modules/

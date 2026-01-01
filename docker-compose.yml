@@ -1,0 +1,238 @@
+# =============================================================================
+# Unified Task Sync - Docker Compose Configuration
+# =============================================================================
+# This configuration deploys the complete Unified Task Sync stack:
+#   - Vikunja (self-hosted task manager)
+#   - MariaDB (database)
+#   - Vikunja MCP Server (Model Context Protocol for Claude Code)
+#   - Cloudflared (Cloudflare Zero Trust tunnel)
+#   - Sync Scheduler (cron-based task synchronization)
+#
+# Usage:
+#   1. Copy .env.example to .env and configure your secrets
+#   2. Run: docker-compose up -d
+#   3. Access Vikunja at http://localhost:3456
+#   4. Configure Claude Code with: ./scripts/configure-mcp.sh
+#
+# Security Notes:
+#   - Never commit .env files to version control
+#   - Generate strong passwords for production use
+#   - Configure Cloudflare Access policies for MCP endpoint
+#   - Consider using Docker secrets for sensitive data in production
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Vikunja - Self-hosted Task Management
+  # ---------------------------------------------------------------------------
+  # Vikunja is an open-source, self-hosted to-do app that provides a clean
+  # interface for managing tasks across multiple projects.
+  # Documentation: https://vikunja.io/docs/
+  # ---------------------------------------------------------------------------
+  vikunja:
+    image: vikunja/vikunja:latest
+    container_name: vikunja
+    restart: unless-stopped
+    ports:
+      # Map container port 3456 to host port 3456
+      # Change the first port if you need a different host port
+      - "3456:3456"
+    environment:
+      # Database connection settings
+      VIKUNJA_DATABASE_TYPE: mysql
+      VIKUNJA_DATABASE_HOST: db
+      VIKUNJA_DATABASE_DATABASE: ${MYSQL_DATABASE:-vikunja}
+      VIKUNJA_DATABASE_USER: ${MYSQL_USER:-vikunja}
+      VIKUNJA_DATABASE_PASSWORD: ${MYSQL_PASSWORD:?Database password is required}
+
+      # Service configuration
+      # Set this to your actual domain/IP in production
+      VIKUNJA_SERVICE_PUBLICURL: ${VIKUNJA_SERVICE_PUBLICURL:-http://localhost:3456}
+      VIKUNJA_SERVICE_JWTSECRET: ${VIKUNJA_SERVICE_JWTSECRET:?JWT secret is required}
+
+      # Frontend configuration (embedded in latest versions)
+      VIKUNJA_SERVICE_ENABLEREGISTRATION: ${VIKUNJA_SERVICE_ENABLEREGISTRATION:-true}
+
+      # Timezone configuration
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Persist Vikunja files (attachments, avatars, etc.)
+      - vikunja-files:/app/vikunja/files
+    networks:
+      - vikunja-network
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      # Labels for CasaOS integration (optional)
+      - "casaos.name=Vikunja"
+      - "casaos.description=Self-hosted task management"
+      - "casaos.icon=https://vikunja.io/images/vikunja-logo.svg"
+
+  # ---------------------------------------------------------------------------
+  # MariaDB - Database Server
+  # ---------------------------------------------------------------------------
+  # MariaDB provides reliable storage for tasks, projects, and user data.
+  # Using MariaDB 10.x for stability and compatibility.
+  # ---------------------------------------------------------------------------
+  db:
+    image: mariadb:10
+    container_name: vikunja-db
+    restart: unless-stopped
+    command:
+      # UTF-8 configuration for proper character support
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      # Database credentials (loaded from .env file)
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Root password is required}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-vikunja}
+      MYSQL_USER: ${MYSQL_USER:-vikunja}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Database password is required}
+
+      # Timezone configuration
+      TZ: ${TZ:-UTC}
+    volumes:
+      # Persist database data
+      - vikunja-db:/var/lib/mysql
+    networks:
+      - vikunja-network
+    healthcheck:
+      # Health check to ensure database is ready before Vikunja starts
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Vikunja MCP Server - Model Context Protocol for Claude Code
+  # ---------------------------------------------------------------------------
+  # Exposes Vikunja tasks via MCP protocol for Claude Code integration.
+  # This enables AI-assisted task management and synchronization.
+  # ---------------------------------------------------------------------------
+  vikunja-mcp:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    container_name: vikunja-mcp
+    restart: unless-stopped
+    ports:
+      - "${MCP_PORT:-3100}:3100"
+    environment:
+      # Vikunja API connection
+      VIKUNJA_API_URL: http://vikunja:3456/api/v1
+      VIKUNJA_API_TOKEN: ${VIKUNJA_API_TOKEN:-}
+      # MCP Server configuration
+      MCP_SERVER_PORT: 3100
+      MCP_SERVER_HOST: 0.0.0.0
+      # Security
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+      # Logging
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-UTC}
+    networks:
+      - vikunja-network
+    depends_on:
+      - vikunja
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "casaos.name=Vikunja MCP"
+      - "casaos.description=MCP server for Claude Code integration"
+
+  # ---------------------------------------------------------------------------
+  # Cloudflared - Cloudflare Zero Trust Tunnel
+  # ---------------------------------------------------------------------------
+  # Securely exposes the MCP server through Cloudflare's network.
+  # Requires a pre-configured tunnel token from Cloudflare Zero Trust dashboard.
+  # ---------------------------------------------------------------------------
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    networks:
+      - vikunja-network
+    depends_on:
+      - vikunja-mcp
+    profiles:
+      - tunnel  # Only start with: docker-compose --profile tunnel up -d
+
+  # ---------------------------------------------------------------------------
+  # Sync Scheduler - Cron-based Task Synchronization
+  # ---------------------------------------------------------------------------
+  # Runs scheduled sync jobs between external systems and Vikunja.
+  # Mounts sync scripts and Claude Code configuration.
+  # ---------------------------------------------------------------------------
+  sync-scheduler:
+    image: alpine:3.19
+    container_name: sync-scheduler
+    restart: unless-stopped
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        # Install required packages
+        apk add --no-cache bash curl jq tzdata
+
+        # Set up cron jobs from mounted file
+        if [ -f /etc/cron.d/sync-jobs ]; then
+          crontab /etc/cron.d/sync-jobs
+        fi
+
+        # Start cron in foreground
+        crond -f -l 2
+    environment:
+      VIKUNJA_API_URL: http://vikunja:3456/api/v1
+      VIKUNJA_API_TOKEN: ${VIKUNJA_API_TOKEN:-}
+      YOUTRACK_URL: ${YOUTRACK_URL:-}
+      YOUTRACK_TOKEN: ${YOUTRACK_TOKEN:-}
+      JIRA_URL: ${JIRA_URL:-}
+      JIRA_EMAIL: ${JIRA_EMAIL:-}
+      JIRA_TOKEN: ${JIRA_TOKEN:-}
+      TZ: ${TZ:-UTC}
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./cron.d:/etc/cron.d:ro
+      - sync-logs:/var/log/sync
+    networks:
+      - vikunja-network
+    depends_on:
+      - vikunja
+    profiles:
+      - scheduler  # Only start with: docker-compose --profile scheduler up -d
+
+# -----------------------------------------------------------------------------
+# Volumes - Persistent Storage
+# -----------------------------------------------------------------------------
+# Named volumes ensure data persistence across container restarts and updates.
+# Data is stored in Docker's volume directory (typically /var/lib/docker/volumes/)
+# -----------------------------------------------------------------------------
+volumes:
+  vikunja-files:
+    name: vikunja-files
+    driver: local
+  vikunja-db:
+    name: vikunja-db
+    driver: local
+  sync-logs:
+    name: sync-logs
+    driver: local
+
+# -----------------------------------------------------------------------------
+# Networks - Container Communication
+# -----------------------------------------------------------------------------
+# Internal network for secure communication between Vikunja and MariaDB.
+# Only Vikunja exposes ports to the host; database is isolated.
+# -----------------------------------------------------------------------------
+networks:
+  vikunja-network:
+    name: vikunja-network
+    driver: bridge

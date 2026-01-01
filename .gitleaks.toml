@@ -1,0 +1,46 @@
+# =============================================================================
+# Gitleaks Configuration
+# =============================================================================
+# Configuration for secret detection in this repository.
+# Customized to reduce false positives while catching real secrets.
+# =============================================================================
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allowlist for known safe patterns"
+
+# Allow example/placeholder values
+regexes = [
+    '''<[^>]+-[^>]+>''',
+    '''<your-[^>]+>''',
+    '''<set-[^>]+>''',
+    '''<generate-[^>]+>''',
+    '''CHANGEME''',
+    '''changeme''',
+    '''change-me''',
+    '''example\.com''',
+    '''localhost''',
+    '''127\.0\.0\.1''',
+]
+
+# Allow specific files that contain example configurations
+paths = [
+    '''.env\.example''',
+    '''\.md$''',
+    '''docs/.*''',
+]
+
+# Custom rules for this project
+[[rules]]
+id = "vikunja-jwt-placeholder"
+description = "Vikunja JWT secret placeholder"
+regex = '''VIKUNJA_SERVICE_JWTSECRET=<[^>]+>'''
+allowlist = { regexes = ['''.*''']}
+
+[[rules]]
+id = "mysql-password-placeholder"
+description = "MySQL password placeholder"
+regex = '''MYSQL_PASSWORD=<[^>]+>'''
+allowlist = { regexes = ['''.*''']}

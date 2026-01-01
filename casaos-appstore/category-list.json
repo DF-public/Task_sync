@@ -1,0 +1,22 @@
+[
+  {
+    "id": "utilities",
+    "name": {
+      "en_us": "Utilities"
+    },
+    "description": {
+      "en_us": "Productivity and utility applications"
+    },
+    "icon": "mdi-tools"
+  },
+  {
+    "id": "productivity",
+    "name": {
+      "en_us": "Productivity"
+    },
+    "description": {
+      "en_us": "Task management and productivity tools"
+    },
+    "icon": "mdi-checkbox-marked-outline"
+  }
+]
