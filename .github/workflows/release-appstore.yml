@@ -1,0 +1,122 @@
+# =============================================================================
+# CasaOS App Store Release Workflow
+# =============================================================================
+# This workflow automatically packages the CasaOS app store as a zip file
+# and attaches it to GitHub releases.
+#
+# The resulting zip can be added to CasaOS via:
+#   App Store > Add Source > paste release URL
+#
+# URL format:
+#   https://github.com/DF_public/unified-task-sync/releases/latest/download/casaos-appstore.zip
+# =============================================================================
+
+name: Release CasaOS App Store
+
+on:
+  release:
+    types: [published]
+  # Allow manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for the release (e.g., v1.0.0)'
+        required: false
+        default: 'latest'
+
+jobs:
+  build-appstore:
+    name: Build and Upload App Store
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate app store structure
+        run: |
+          echo "Validating CasaOS app store structure..."
+
+          # Check required files exist
+          if [ ! -d "casaos-appstore/Apps" ]; then
+            echo "ERROR: casaos-appstore/Apps directory not found"
+            exit 1
+          fi
+
+          if [ ! -f "casaos-appstore/category-list.json" ]; then
+            echo "ERROR: category-list.json not found"
+            exit 1
+          fi
+
+          # Validate JSON syntax
+          echo "Validating JSON files..."
+          python3 -m json.tool casaos-appstore/category-list.json > /dev/null
+
+          # Check each app has a docker-compose.yml
+          for app_dir in casaos-appstore/Apps/*/; do
+            if [ -d "$app_dir" ]; then
+              app_name=$(basename "$app_dir")
+              if [ ! -f "${app_dir}docker-compose.yml" ]; then
+                echo "ERROR: ${app_name} missing docker-compose.yml"
+                exit 1
+              fi
+              echo "✓ ${app_name} validated"
+            fi
+          done
+
+          echo "All validations passed!"
+
+      - name: Package app store
+        run: |
+          echo "Creating casaos-appstore.zip..."
+          cd casaos-appstore
+          zip -r ../casaos-appstore.zip .
+          cd ..
+
+          # Show package contents
+          echo "Package contents:"
+          unzip -l casaos-appstore.zip
+
+          # Show package size
+          ls -lh casaos-appstore.zip
+
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: casaos-appstore.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact (for manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: casaos-appstore
+          path: casaos-appstore.zip
+          retention-days: 7
+
+      - name: Summary
+        run: |
+          echo "## CasaOS App Store Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Package Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **File:** casaos-appstore.zip" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size:** $(ls -lh casaos-appstore.zip | awk '{print $5}')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Apps Included" >> $GITHUB_STEP_SUMMARY
+          for app_dir in casaos-appstore/Apps/*/; do
+            if [ -d "$app_dir" ]; then
+              echo "- $(basename "$app_dir")" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" == "release" ]; then
+            echo "### Installation URL" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            echo "https://github.com/${{ github.repository }}/releases/latest/download/casaos-appstore.zip" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi
