@@ -1,0 +1,18 @@
+# =============================================================================
+# Unified Task Sync - Cron Jobs
+# =============================================================================
+# This file defines scheduled sync jobs for the sync-scheduler container.
+#
+# Format: minute hour day month weekday command
+#
+# Environment variables are loaded from the container environment.
+# =============================================================================
+
+# Sync all sources every 4 hours
+0 */4 * * * /scripts/sync-tasks.sh --source all >> /var/log/sync/cron.log 2>&1
+
+# Daily summary at 9 AM (optional - uncomment to enable)
+# 0 9 * * * /scripts/sync-tasks.sh --source all --verbose >> /var/log/sync/daily.log 2>&1
+
+# Health check every hour
+0 * * * * curl -sf http://vikunja:3456/api/v1/info > /dev/null || echo "[$(date)] Vikunja health check failed" >> /var/log/sync/health.log
