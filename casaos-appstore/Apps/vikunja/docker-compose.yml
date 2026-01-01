@@ -1,132 +1,59 @@
-# =============================================================================
-# Vikunja - Self-Hosted Task Management for CasaOS
-# =============================================================================
-# This configuration is designed for the CasaOS app store.
-# It deploys Vikunja with MariaDB as a complete task management solution.
-# =============================================================================
+# Configuration for vikunja setup
+cosmos-installer: null
 
-name: vikunja
-
+# Service definitions for the vikunja application
 services:
-  # ---------------------------------------------------------------------------
-  # Vikunja Application
-  # ---------------------------------------------------------------------------
   vikunja:
     image: vikunja/vikunja:0.24.6
     container_name: vikunja
-    restart: unless-stopped
+    ports:
+      - "3456:3456"
+    volumes:
+      - vikunja_files:/app/vikunja/files
     environment:
-      # Database configuration
-      VIKUNJA_DATABASE_TYPE: mysql
+      VIKUNJA_SERVICE_PUBLICURL: http://<your public frontend url with slash>/
       VIKUNJA_DATABASE_HOST: vikunja-db
-      VIKUNJA_DATABASE_DATABASE: vikunja
+      VIKUNJA_DATABASE_PASSWORD: secret
+      VIKUNJA_DATABASE_TYPE: mysql
       VIKUNJA_DATABASE_USER: vikunja
-      VIKUNJA_DATABASE_PASSWORD: vikunja_db_password
-      # Service configuration
-      VIKUNJA_SERVICE_PUBLICURL: ""
+      VIKUNJA_DATABASE_DATABASE: vikunja
       VIKUNJA_SERVICE_JWTSECRET: change-me-to-a-random-secret-string
       VIKUNJA_SERVICE_ENABLEREGISTRATION: "true"
-      # Timezone
-      TZ: $TZ
-    ports:
-      - target: 3456
-        published: $WEBUI_PORT
-        protocol: tcp
-    volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/files
-        target: /app/vikunja/files
+    restart: unless-stopped
+    depends_on:
+      - vikunja-db
     networks:
       - vikunja-network
-    depends_on:
-      vikunja-db:
-        condition: service_healthy
-    deploy:
-      resources:
-        reservations:
-          memory: 128M
-    x-casaos:
-      envs:
-        - container: VIKUNJA_SERVICE_PUBLICURL
-          description:
-            en_us: "Public URL where Vikunja is accessible (e.g., http://your-ip:3456)"
-        - container: VIKUNJA_SERVICE_JWTSECRET
-          description:
-            en_us: "JWT secret for authentication (change this to a random string!)"
-        - container: VIKUNJA_SERVICE_ENABLEREGISTRATION
-          description:
-            en_us: "Allow new user registration (set to false after initial setup)"
-        - container: VIKUNJA_DATABASE_PASSWORD
-          description:
-            en_us: "Database password (must match the database service password)"
-        - container: TZ
-          description:
-            en_us: "Timezone for the application"
-      ports:
-        - container: "3456"
-          description:
-            en_us: "Vikunja Web UI Port"
-      volumes:
-        - container: /app/vikunja/files
-          description:
-            en_us: "Vikunja files storage (attachments, avatars)"
 
-  # ---------------------------------------------------------------------------
-  # MariaDB Database
-  # ---------------------------------------------------------------------------
   vikunja-db:
     image: mariadb:10.11
     container_name: vikunja-db
-    restart: unless-stopped
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_ROOT_PASSWORD: vikunja_root_password
-      MYSQL_DATABASE: vikunja
+      MYSQL_ROOT_PASSWORD: supersecret
       MYSQL_USER: vikunja
-      MYSQL_PASSWORD: vikunja_db_password
-      TZ: $TZ
+      MYSQL_PASSWORD: secret
+      MYSQL_DATABASE: vikunja
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/database
-        target: /var/lib/mysql
+      - vikunja_mysql:/var/lib/mysql
+    restart: unless-stopped
     networks:
       - vikunja-network
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-    deploy:
-      resources:
-        reservations:
-          memory: 256M
-    x-casaos:
-      envs:
-        - container: MYSQL_ROOT_PASSWORD
-          description:
-            en_us: "MariaDB root password"
-        - container: MYSQL_PASSWORD
-          description:
-            en_us: "Database password for Vikunja user (must match app password)"
-        - container: TZ
-          description:
-            en_us: "Timezone for the database"
-      volumes:
-        - container: /var/lib/mysql
-          description:
-            en_us: "MariaDB data storage"
 
 networks:
   vikunja-network:
-    name: vikunja-network
     driver: bridge
 
-# =============================================================================
-# CasaOS App Store Metadata
-# =============================================================================
+volumes:
+  vikunja_files:
+    name: vikunja_files
+    driver: local
+  vikunja_mysql:
+    name: vikunja_mysql
+    driver: local
+
 x-casaos:
   architectures:
     - amd64
@@ -141,7 +68,6 @@ x-casaos:
       This installation includes:
       - Vikunja task manager with web UI
       - MariaDB database for data persistence
-      - Pre-configured networking between services
 
       Perfect for:
       - Personal task management
@@ -174,3 +100,5 @@ x-casaos:
         3. After creating your account, set `VIKUNJA_SERVICE_ENABLEREGISTRATION` to `false`
   title:
     en_us: Vikunja
+
+minVersion: 0.14.0
