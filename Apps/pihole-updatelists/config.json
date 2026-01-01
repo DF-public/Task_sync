@@ -1,0 +1,7 @@
+{
+  "id": "pihole-updatelists",
+  "version": "2025.11.1",
+  "image": "jacklul/pihole",
+  "youtube": "",
+  "docs_link": ""
+}

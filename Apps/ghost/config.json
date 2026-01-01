@@ -1,0 +1,7 @@
+{
+  "id": "ghost",
+  "version": "6.10.3-alpine",
+  "image": "ghost",
+  "youtube": "https://youtu.be/oJZK9vH4W4Y",
+  "docs_link": ""
+}
