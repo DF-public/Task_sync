@@ -79,6 +79,41 @@ services:
           description:
             en_us: "MariaDB data storage"
 
+  vikunja-mcp:
+    image: ghcr.io/df-public/vikunja-mcp-server:latest
+    container_name: vikunja-mcp
+    restart: unless-stopped
+    ports:
+      - target: 3100
+        published: "3100"
+        protocol: tcp
+    environment:
+      VIKUNJA_API_URL: http://vikunja:3456/api/v1
+      VIKUNJA_API_TOKEN: ""
+      MCP_SERVER_PORT: "3100"
+      MCP_SERVER_HOST: "0.0.0.0"
+      MCP_AUTH_TOKEN: ""
+      LOG_LEVEL: info
+    depends_on:
+      - vikunja
+    networks:
+      - vikunja-network
+    x-casaos:
+      envs:
+        - container: VIKUNJA_API_TOKEN
+          description:
+            en_us: "Vikunja API token (create in Vikunja settings)"
+        - container: MCP_AUTH_TOKEN
+          description:
+            en_us: "Optional auth token for MCP server"
+        - container: LOG_LEVEL
+          description:
+            en_us: "Log level (debug, info, warn, error)"
+      ports:
+        - container: "3100"
+          description:
+            en_us: "MCP Server Port"
+
 networks:
   vikunja-network:
     driver: bridge
@@ -97,6 +132,7 @@ x-casaos:
       Features:
       - Task management with web UI
       - MariaDB database for persistence
+      - MCP Server for Claude Code integration
       - Project organization
       - API integration support
   developer: Vikunja Team
@@ -114,5 +150,6 @@ x-casaos:
         1. Change VIKUNJA_SERVICE_JWTSECRET
         2. Set VIKUNJA_SERVICE_PUBLICURL to your URL
         3. Disable registration after creating account
+        4. For MCP: Create API token in Vikunja and set VIKUNJA_API_TOKEN
   title:
     en_us: Vikunja
