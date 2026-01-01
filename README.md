@@ -5,7 +5,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docs.docker.com/compose/)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-MCP-7C3AED?logo=anthropic&logoColor=white)](https://claude.ai)
 [![Self-Hosted](https://img.shields.io/badge/Self--Hosted-Privacy%20First-22C55E?logo=homeassistant&logoColor=white)](https://vikunja.io)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](./LICENSE)
 
 ---
 
@@ -47,7 +47,7 @@ Switching between systems throughout the day creates cognitive overhead. Worse, 
 - **Privacy-first design** - Only task titles synced, no descriptions or attachments
 - **Bidirectional status sync** - Complete tasks anywhere, sync everywhere
 - **Zero-trust security** - Separate read-only tokens, minimal API scopes
-- **CasaOS compatible** - Easy deployment on home servers
+- **CasaOS App Store** - One-click installation via custom app store
 
 ---
 
@@ -113,6 +113,33 @@ docker-compose logs -f vikunja
 
 ---
 
+## CasaOS App Store
+
+For CasaOS users, we provide a custom app store for one-click installation.
+
+### Adding the App Store
+
+1. Open your CasaOS dashboard
+2. Navigate to **App Store**
+3. Click **Add Source** (top right)
+4. Paste the URL:
+   ```
+   https://github.com/DF_public/unified-task-sync/releases/latest/download/casaos-appstore.zip
+   ```
+5. Click **Add** and wait for installation
+
+### Installing Vikunja
+
+After adding the app store:
+1. Find **Vikunja** in the App Store
+2. Click **Install**
+3. Configure the environment variables (especially passwords!)
+4. Access at `http://your-casaos-ip:3456`
+
+> **Requires:** CasaOS 0.4.4 or higher
+
+---
+
 ## Architecture
 
 ```
@@ -154,10 +181,14 @@ docker-compose logs -f vikunja
 ```
 unified-task-sync/
 ├── README.md              # This file
-├── LICENSE                # MIT License
+├── LICENSE                # AGPL-3.0 License
 ├── .gitignore             # Security-conscious exclusions
 ├── docker-compose.yml     # Vikunja + MariaDB configuration
 ├── .env.example           # Environment template (never commit .env!)
+├── casaos-appstore/       # CasaOS custom app store
+│   ├── Apps/vikunja/      # Vikunja app configuration
+│   ├── category-list.json # App store categories
+│   └── README.md          # App store documentation
 ├── docs/
 │   ├── architecture.md    # System architecture details
 │   ├── INSTALLATION.md    # Detailed setup guide
@@ -174,6 +205,7 @@ unified-task-sync/
 - [x] Docker Compose configuration for Vikunja
 - [x] Security-first `.gitignore` and `.env.example`
 - [x] Professional README
+- [x] CasaOS custom app store
 
 ### Phase 2: Automation (Day 2)
 - [ ] Claude Code slash command (`/sync-tasks`)
@@ -238,7 +270,7 @@ This is a personal portfolio project demonstrating:
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+This project is licensed under the GNU Affero General Public License v3.0 - see the [LICENSE](./LICENSE) file for details.
 
 ---
 
