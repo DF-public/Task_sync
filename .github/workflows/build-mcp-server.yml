@@ -1,10 +1,10 @@
-name: Build MCP Server Image
+name: Build MCP HTTP Wrapper Image
 
 on:
   push:
     branches: [main]
     paths:
-      - 'mcp-server/**'
+      - 'mcp-wrapper/**'
       - '.github/workflows/build-mcp-server.yml'
   release:
     types: [published]
@@ -12,7 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/vikunja-mcp-server
+  IMAGE_NAME: ${{ github.repository_owner }}/vikunja-mcp-http
 
 jobs:
   build:
@@ -50,7 +50,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./mcp-server
+          context: ./mcp-wrapper
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

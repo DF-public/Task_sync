@@ -104,28 +104,23 @@ services:
       start_period: 30s
 
   # ---------------------------------------------------------------------------
-  # Vikunja MCP Server - Model Context Protocol for Claude Code
+  # Vikunja MCP HTTP Server - Model Context Protocol for Claude Connectors
   # ---------------------------------------------------------------------------
-  # Exposes Vikunja tasks via MCP protocol for Claude Code integration.
-  # This enables AI-assisted task management and synchronization.
+  # Wraps @democratize-technology/vikunja-mcp with mcp-proxy for HTTP/SSE access.
+  # This enables Claude Custom Connectors integration via Cloudflare Tunnel.
   # ---------------------------------------------------------------------------
   vikunja-mcp:
     build:
-      context: ./mcp-server
+      context: ./mcp-wrapper
       dockerfile: Dockerfile
     container_name: vikunja-mcp
     restart: unless-stopped
     ports:
-      - "${MCP_PORT:-3100}:3100"
+      - "${MCP_PORT:-3100}:8080"
     environment:
       # Vikunja API connection
-      VIKUNJA_API_URL: http://vikunja:3456/api/v1
+      VIKUNJA_URL: http://vikunja:3456
       VIKUNJA_API_TOKEN: ${VIKUNJA_API_TOKEN:-}
-      # MCP Server configuration
-      MCP_SERVER_PORT: 3100
-      MCP_SERVER_HOST: 0.0.0.0
-      # Security
-      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-info}
       TZ: ${TZ:-UTC}
@@ -134,14 +129,14 @@ services:
     depends_on:
       - vikunja
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3100/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/sse"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
     labels:
       - "casaos.name=Vikunja MCP"
-      - "casaos.description=MCP server for Claude Code integration"
+      - "casaos.description=MCP HTTP server for Claude Custom Connectors"
 
   # ---------------------------------------------------------------------------
   # Sync Scheduler - Cron-based Task Synchronization
