@@ -60,7 +60,7 @@ x-casaos:
     - arm64
   main: vikunja
   author: DF_public
-  category: Utilities
+  category: utilities
   description:
     en_us: |
       Vikunja is an open-source, self-hosted task management application.
