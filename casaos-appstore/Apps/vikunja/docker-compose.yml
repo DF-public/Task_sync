@@ -1,17 +1,21 @@
 # Configuration for vikunja setup
-cosmos-installer: null
+name: vikunja
 
-# Service definitions for the vikunja application
 services:
   vikunja:
     image: vikunja/vikunja:0.24.6
     container_name: vikunja
+    restart: unless-stopped
     ports:
-      - "3456:3456"
+      - target: 3456
+        published: "3456"
+        protocol: tcp
     volumes:
-      - vikunja_files:/app/vikunja/files
+      - type: bind
+        source: /DATA/AppData/$AppID/files
+        target: /app/vikunja/files
     environment:
-      VIKUNJA_SERVICE_PUBLICURL: http://<your public frontend url with slash>/
+      VIKUNJA_SERVICE_PUBLICURL: ""
       VIKUNJA_DATABASE_HOST: vikunja-db
       VIKUNJA_DATABASE_PASSWORD: secret
       VIKUNJA_DATABASE_TYPE: mysql
@@ -19,15 +23,34 @@ services:
       VIKUNJA_DATABASE_DATABASE: vikunja
       VIKUNJA_SERVICE_JWTSECRET: change-me-to-a-random-secret-string
       VIKUNJA_SERVICE_ENABLEREGISTRATION: "true"
-    restart: unless-stopped
     depends_on:
       - vikunja-db
     networks:
       - vikunja-network
+    x-casaos:
+      envs:
+        - container: VIKUNJA_SERVICE_PUBLICURL
+          description:
+            en_us: "Public URL (e.g., http://your-ip:3456)"
+        - container: VIKUNJA_SERVICE_JWTSECRET
+          description:
+            en_us: "JWT secret for authentication"
+        - container: VIKUNJA_DATABASE_PASSWORD
+          description:
+            en_us: "Database password (must match vikunja-db)"
+      ports:
+        - container: "3456"
+          description:
+            en_us: "WebUI Port"
+      volumes:
+        - container: /app/vikunja/files
+          description:
+            en_us: "Vikunja files storage"
 
   vikunja-db:
     image: mariadb:10.11
     container_name: vikunja-db
+    restart: unless-stopped
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -37,22 +60,27 @@ services:
       MYSQL_PASSWORD: secret
       MYSQL_DATABASE: vikunja
     volumes:
-      - vikunja_mysql:/var/lib/mysql
-    restart: unless-stopped
+      - type: bind
+        source: /DATA/AppData/$AppID/mysql
+        target: /var/lib/mysql
     networks:
       - vikunja-network
+    x-casaos:
+      envs:
+        - container: MYSQL_ROOT_PASSWORD
+          description:
+            en_us: "MariaDB root password"
+        - container: MYSQL_PASSWORD
+          description:
+            en_us: "Database password for Vikunja"
+      volumes:
+        - container: /var/lib/mysql
+          description:
+            en_us: "MariaDB data storage"
 
 networks:
   vikunja-network:
     driver: bridge
-
-volumes:
-  vikunja_files:
-    name: vikunja_files
-    driver: local
-  vikunja_mysql:
-    name: vikunja_mysql
-    driver: local
 
 x-casaos:
   architectures:
@@ -60,23 +88,16 @@ x-casaos:
     - arm64
   main: vikunja
   author: DF_public
-  category: utilities
+  category: Utilities
   description:
     en_us: |
       Vikunja is an open-source, self-hosted task management application.
 
-      This installation includes:
-      - Vikunja task manager with web UI
-      - MariaDB database for data persistence
-
-      Perfect for:
-      - Personal task management
-      - Team collaboration
+      Features:
+      - Task management with web UI
+      - MariaDB database for persistence
       - Project organization
-      - Integration with external systems via API
-
-      After installation, access the web interface and create your first account.
-      For security, disable registration after creating your account.
+      - API integration support
   developer: Vikunja Team
   icon: https://vikunja.io/images/vikunja-logo.svg
   index: /
@@ -88,17 +109,9 @@ x-casaos:
   tips:
     before_install:
       en_us: |
-        **Important Security Notes:**
-
-        1. After installation, change the following default passwords:
-           - `VIKUNJA_SERVICE_JWTSECRET` - Generate with: `openssl rand -base64 32`
-           - `MYSQL_ROOT_PASSWORD` - Choose a strong password
-           - `MYSQL_PASSWORD` / `VIKUNJA_DATABASE_PASSWORD` - Must match each other
-
-        2. Set `VIKUNJA_SERVICE_PUBLICURL` to your actual access URL
-
-        3. After creating your account, set `VIKUNJA_SERVICE_ENABLEREGISTRATION` to `false`
+        After installation:
+        1. Change VIKUNJA_SERVICE_JWTSECRET
+        2. Set VIKUNJA_SERVICE_PUBLICURL to your URL
+        3. Disable registration after creating account
   title:
     en_us: Vikunja
-
-minVersion: 0.14.0
