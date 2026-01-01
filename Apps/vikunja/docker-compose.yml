@@ -1,21 +1,16 @@
 # Configuration for vikunja setup
-name: vikunja
 
+name: vikunja
 services:
   vikunja:
     image: vikunja/vikunja:0.24.6
     container_name: vikunja
-    restart: unless-stopped
     ports:
-      - target: 3456
-        published: "3456"
-        protocol: tcp
+      - "3456:3456"
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/files
-        target: /app/vikunja/files
+      - /DATA/AppData/$AppID/files:/app/vikunja/files
     environment:
-      VIKUNJA_SERVICE_PUBLICURL: ""
+      VIKUNJA_SERVICE_PUBLICURL: http://<your public frontend url with slash>/
       VIKUNJA_DATABASE_HOST: vikunja-db
       VIKUNJA_DATABASE_PASSWORD: secret
       VIKUNJA_DATABASE_TYPE: mysql
@@ -23,6 +18,7 @@ services:
       VIKUNJA_DATABASE_DATABASE: vikunja
       VIKUNJA_SERVICE_JWTSECRET: change-me-to-a-random-secret-string
       VIKUNJA_SERVICE_ENABLEREGISTRATION: "true"
+    restart: unless-stopped
     depends_on:
       - vikunja-db
     networks:
@@ -31,26 +27,25 @@ services:
       envs:
         - container: VIKUNJA_SERVICE_PUBLICURL
           description:
-            en_us: "Public URL (e.g., http://your-ip:3456)"
-        - container: VIKUNJA_SERVICE_JWTSECRET
-          description:
-            en_us: "JWT secret for authentication"
+            en_us: "Container Variable: VIKUNJA_SERVICE_PUBLICURL"
         - container: VIKUNJA_DATABASE_PASSWORD
           description:
-            en_us: "Database password (must match vikunja-db)"
-      ports:
-        - container: "3456"
+            en_us: "Container Variable: VIKUNJA_DATABASE_PASSWORD"
+        - container: VIKUNJA_SERVICE_JWTSECRET
           description:
-            en_us: "WebUI Port"
+            en_us: "Container Variable: VIKUNJA_SERVICE_JWTSECRET"
       volumes:
         - container: /app/vikunja/files
           description:
-            en_us: "Vikunja files storage"
+            en_us: "Container Path: /app/vikunja/files"
+      ports:
+        - container: "3456"
+          description:
+            en_us: "Container Port: 3456"
 
   vikunja-db:
     image: mariadb:10.11
     container_name: vikunja-db
-    restart: unless-stopped
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -60,23 +55,22 @@ services:
       MYSQL_PASSWORD: secret
       MYSQL_DATABASE: vikunja
     volumes:
-      - type: bind
-        source: /DATA/AppData/$AppID/mysql
-        target: /var/lib/mysql
+      - /DATA/AppData/$AppID/mysql:/var/lib/mysql
+    restart: unless-stopped
     networks:
       - vikunja-network
     x-casaos:
       envs:
         - container: MYSQL_ROOT_PASSWORD
           description:
-            en_us: "MariaDB root password"
+            en_us: "Container Variable: MYSQL_ROOT_PASSWORD"
         - container: MYSQL_PASSWORD
           description:
-            en_us: "Database password for Vikunja"
+            en_us: "Container Variable: MYSQL_PASSWORD"
       volumes:
         - container: /var/lib/mysql
           description:
-            en_us: "MariaDB data storage"
+            en_us: "Container Path: /var/lib/mysql"
 
 networks:
   vikunja-network:
@@ -87,31 +81,15 @@ x-casaos:
     - amd64
     - arm64
   main: vikunja
-  author: DF_public
-  category: Utilities
   description:
-    en_us: |
-      Vikunja is an open-source, self-hosted task management application.
-
-      Features:
-      - Task management with web UI
-      - MariaDB database for persistence
-      - Project organization
-      - API integration support
-  developer: Vikunja Team
-  icon: https://vikunja.io/images/vikunja-logo.svg
-  index: /
-  port_map: "3456"
-  scheme: http
+    en_us: The open-source, self-hostable to-do app. Organize everything, on all platforms.
   tagline:
-    en_us: Self-hosted task management made simple
-  thumbnail: https://vikunja.io/images/vikunja-logo.svg
-  tips:
-    before_install:
-      en_us: |
-        After installation:
-        1. Change VIKUNJA_SERVICE_JWTSECRET
-        2. Set VIKUNJA_SERVICE_PUBLICURL to your URL
-        3. Disable registration after creating account
+    en_us: Vikunja
+  developer: Vikunja Team
+  author: DF_public
+  icon: https://cdn.jsdelivr.net/gh/selfhst/icons/png/vikunja.png
+  thumbnail: ""
   title:
     en_us: Vikunja
+  category: Utilities
+  port_map: "3456"
