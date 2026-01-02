@@ -25,7 +25,7 @@ COPY mcp-server/package.json ./
 COPY mcp-server/src ./src/
 
 # Copy HTTP proxy wrapper
-COPY mcp-wrapper/proxy.js ./proxy.js
+COPY mcp-wrapper/proxy.cjs ./proxy.cjs
 COPY mcp-wrapper/start.sh ./start.sh
 RUN chmod +x ./start.sh
 

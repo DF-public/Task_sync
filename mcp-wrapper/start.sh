@@ -6,4 +6,4 @@ mcp-proxy --port 8081 --host 127.0.0.1 --pass-environment --allow-origin='*' nod
 sleep 2
 
 # Start HTTP proxy on port 8080 (foreground)
-node /app/proxy.js
+node /app/proxy.cjs
