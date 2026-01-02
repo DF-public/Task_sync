@@ -261,8 +261,9 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Protected MCP endpoints - require Bearer token
-  if (pathname === '/mcp' || pathname.startsWith('/mcp/')) {
+  // Protected MCP endpoints - require Bearer token (both Streamable HTTP and SSE)
+  if (pathname === '/mcp' || pathname.startsWith('/mcp/') ||
+      pathname === '/sse' || pathname.startsWith('/sse/')) {
     const tokenData = validateToken(req);
     if (!tokenData) {
       res.setHeader('WWW-Authenticate', `Bearer realm="${OAUTH_ISSUER}", resource_metadata="${OAUTH_ISSUER}/.well-known/oauth-authorization-server"`);
