@@ -88,7 +88,7 @@ services:
         published: "3100"
         protocol: tcp
     environment:
-      VIKUNJA_URL: http://vikunja:3456
+      VIKUNJA_API_URL: http://vikunja:3456/api/v1
       VIKUNJA_API_TOKEN: ""
       LOG_LEVEL: info
     depends_on:

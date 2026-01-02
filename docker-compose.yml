@@ -106,20 +106,20 @@ services:
   # ---------------------------------------------------------------------------
   # Vikunja MCP HTTP Server - Model Context Protocol for Claude Connectors
   # ---------------------------------------------------------------------------
-  # Wraps @democratize-technology/vikunja-mcp with mcp-proxy for HTTP/SSE access.
+  # Wraps our custom vikunja-mcp with mcp-proxy for HTTP/SSE access.
   # This enables Claude Custom Connectors integration via Cloudflare Tunnel.
   # ---------------------------------------------------------------------------
   vikunja-mcp:
     build:
-      context: ./mcp-wrapper
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./mcp-wrapper/Dockerfile
     container_name: vikunja-mcp
     restart: unless-stopped
     ports:
       - "${MCP_PORT:-3100}:8080"
     environment:
       # Vikunja API connection
-      VIKUNJA_URL: http://vikunja:3456
+      VIKUNJA_API_URL: http://vikunja:3456/api/v1
       VIKUNJA_API_TOKEN: ${VIKUNJA_API_TOKEN:-}
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-info}

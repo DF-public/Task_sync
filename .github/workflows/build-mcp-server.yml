@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'mcp-wrapper/**'
+      - 'mcp-server/**'
       - '.github/workflows/build-mcp-server.yml'
   release:
     types: [published]
@@ -50,7 +51,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./mcp-wrapper
+          context: .
+          file: ./mcp-wrapper/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

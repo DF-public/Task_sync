@@ -1,11 +1,14 @@
 # =============================================================================
 # Vikunja MCP HTTP Wrapper
 # =============================================================================
-# Wraps the @democratize-technology/vikunja-mcp STDIO server with mcp-proxy
+# Wraps our custom vikunja-mcp STDIO server with mcp-proxy
 # to expose it via HTTP/SSE for Claude Custom Connectors.
 #
 # Architecture:
 #   Claude.ai → mcp-proxy:8080 (HTTP/SSE) → vikunja-mcp (STDIO) → Vikunja API
+#
+# Build context must be the repo root:
+#   docker build -f mcp-wrapper/Dockerfile .
 # =============================================================================
 
 FROM node:20-alpine
@@ -14,27 +17,35 @@ FROM node:20-alpine
 RUN apk add --no-cache python3 py3-pip curl && \
     pip3 install --break-system-packages mcp-proxy
 
-# Install vikunja-mcp globally (pin to 0.1.1 - version 0.2.0 has a Zod bug)
-RUN npm install -g @democratize-technology/vikunja-mcp@0.1.1
+# Create app directory
+WORKDIR /app
+
+# Copy custom MCP server code (build context is repo root)
+COPY mcp-server/package.json ./
+COPY mcp-server/src ./src/
+
+# Install dependencies
+RUN npm install --omit=dev
 
 # Create non-root user
 RUN addgroup -g 1001 -S mcp && \
-    adduser -S mcp -u 1001 -G mcp
+    adduser -S mcp -u 1001 -G mcp && \
+    chown -R mcp:mcp /app
 
 USER mcp
 
-# Health check - use /mcp endpoint with HEAD request (SSE keeps connections open)
+# Health check - use /mcp endpoint with timeout (SSE keeps connections open)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s \
     CMD curl -sf --max-time 5 -o /dev/null http://localhost:8080/mcp || exit 1
 
 EXPOSE 8080
 
-# Environment defaults
-ENV VIKUNJA_URL="" \
+# Environment defaults (our custom server uses VIKUNJA_API_URL with /api/v1 suffix)
+ENV VIKUNJA_API_URL="" \
     VIKUNJA_API_TOKEN="" \
     LOG_LEVEL="info"
 
-# Run mcp-proxy wrapping vikunja-mcp
-# --pass-environment ensures VIKUNJA_URL and VIKUNJA_API_TOKEN are passed to vikunja-mcp
+# Run mcp-proxy wrapping our custom vikunja-mcp
+# --pass-environment ensures env vars are passed to the subprocess
 ENTRYPOINT ["mcp-proxy", "--port", "8080", "--host", "0.0.0.0", "--pass-environment"]
-CMD ["vikunja-mcp"]
+CMD ["node", "src/index.js"]
