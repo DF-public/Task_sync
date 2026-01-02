@@ -14,8 +14,8 @@ FROM node:20-alpine
 RUN apk add --no-cache python3 py3-pip curl && \
     pip3 install --break-system-packages mcp-proxy
 
-# Install vikunja-mcp globally
-RUN npm install -g @democratize-technology/vikunja-mcp
+# Install vikunja-mcp globally (pin to 0.1.1 - version 0.2.0 has a Zod bug)
+RUN npm install -g @democratize-technology/vikunja-mcp@0.1.1
 
 # Create non-root user
 RUN addgroup -g 1001 -S mcp && \
@@ -23,9 +23,9 @@ RUN addgroup -g 1001 -S mcp && \
 
 USER mcp
 
-# Health check
+# Health check - use /mcp endpoint with HEAD request (SSE keeps connections open)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s \
-    CMD curl -f http://localhost:8080/sse || exit 1
+    CMD curl -sf --max-time 5 -o /dev/null http://localhost:8080/mcp || exit 1
 
 EXPOSE 8080
 
