@@ -24,6 +24,11 @@ WORKDIR /app
 COPY mcp-server/package.json ./
 COPY mcp-server/src ./src/
 
+# Copy HTTP proxy wrapper
+COPY mcp-wrapper/proxy.js ./proxy.js
+COPY mcp-wrapper/start.sh ./start.sh
+RUN chmod +x ./start.sh
+
 # Install dependencies
 RUN npm install --omit=dev
 
@@ -45,7 +50,7 @@ ENV VIKUNJA_API_URL="" \
     VIKUNJA_API_TOKEN="" \
     LOG_LEVEL="info"
 
-# Run mcp-proxy wrapping our custom vikunja-mcp
-# --pass-environment ensures env vars are passed to the subprocess
-# --allow-origin enables CORS for Claude Custom Connectors (use * for any origin)
-CMD ["mcp-proxy", "--port", "8080", "--host", "0.0.0.0", "--pass-environment", "--allow-origin=*", "node", "src/index.js"]
+# Run the startup script which:
+# 1. Starts mcp-proxy on port 8081 (internal)
+# 2. Starts HTTP proxy on port 8080 (handles HEAD requests for Claude)
+CMD ["./start.sh"]
