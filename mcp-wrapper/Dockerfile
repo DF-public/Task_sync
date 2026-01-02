@@ -47,6 +47,5 @@ ENV VIKUNJA_API_URL="" \
 
 # Run mcp-proxy wrapping our custom vikunja-mcp
 # --pass-environment ensures env vars are passed to the subprocess
-# --allow-origin enables CORS for Claude Custom Connectors
-ENTRYPOINT ["mcp-proxy", "--port", "8080", "--host", "0.0.0.0", "--pass-environment", "--allow-origin", "https://claude.ai", "--allow-origin", "https://claude.com"]
-CMD ["node", "src/index.js"]
+# --allow-origin enables CORS for Claude Custom Connectors (use * for any origin)
+CMD ["mcp-proxy", "--port", "8080", "--host", "0.0.0.0", "--pass-environment", "--allow-origin=*", "node", "src/index.js"]
