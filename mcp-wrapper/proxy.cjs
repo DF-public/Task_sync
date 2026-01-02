@@ -15,6 +15,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, HEAD, OPTIONS, DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, mcp-session-id, MCP-Protocol-Version, Accept');
+  res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id, MCP-Protocol-Version');
 
   // Handle HEAD requests - Claude uses this to validate the server
   if (req.method === 'HEAD') {
