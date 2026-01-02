@@ -39,16 +39,19 @@ RUN addgroup -g 1001 -S mcp && \
 
 USER mcp
 
-# Health check - use /mcp endpoint with timeout (SSE keeps connections open)
+# Health check - use OAuth metadata endpoint (doesn't require auth)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s \
-    CMD curl -sf --max-time 5 -o /dev/null http://localhost:8080/mcp || exit 1
+    CMD curl -sf --max-time 5 -o /dev/null http://localhost:8080/.well-known/oauth-authorization-server || exit 1
 
 EXPOSE 8080
 
-# Environment defaults (our custom server uses VIKUNJA_API_URL with /api/v1 suffix)
+# Environment defaults
 ENV VIKUNJA_API_URL="" \
     VIKUNJA_API_TOKEN="" \
-    LOG_LEVEL="info"
+    LOG_LEVEL="info" \
+    OAUTH_CLIENT_ID="claude-connector" \
+    OAUTH_CLIENT_SECRET="" \
+    OAUTH_ISSUER=""
 
 # Run the startup script which:
 # 1. Starts mcp-proxy on port 8081 (internal)
